@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sleepy TV Control</title>
+</head>
+<body>
+    <h1>Sleepy TV Control Panel</h1>
+    <p>Status: {{ status }}</p>
+    <h2>Connected Device</h2>
+    <ul>
+        <li>IP Address: {{ device_info.device_ip }}</li>
+        <li>Device ID: {{ device_info.device_id }}</li>
+        <li>Device Key: {{ device_info.device_key }}</li>
+    </ul>
+    <form action="{{ url_for('start_service') }}" method="post">
+        <label for="eye_ar_thresh">Eye Aspect Ratio Threshold:</label>
+        <input type="text" id="eye_ar_thresh" name="eye_ar_thresh" value="0.25" required><br>
+        <label for="eye_ar_consec_frames">Consecutive Frames for Blink Detection:</label>
+        <input type="text" id="eye_ar_consec_frames" name="eye_ar_consec_frames" value="30" required><br>
+        <button type="submit">Start Service</button>
+    </form>
+    <form action="{{ url_for('stop_service') }}" method="post">
+        <button type="submit">Stop Service</button>
+    </form>
+    <form action="{{ url_for('restart_scan') }}" method="post">
+        <button type="submit">Restart Device Scan</button>
+    </form>
+</body>
+</html>

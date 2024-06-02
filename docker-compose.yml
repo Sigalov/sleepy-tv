@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  sleepy-tv:
+    build: .
+    container_name: sleepy-tv
+    restart: always
+    ports:
+      - "5001:5000"
+    volumes:
+      - .:/usr/src/app
