@@ -5,9 +5,10 @@ from scipy.spatial import distance as dist
 import subprocess
 import os
 import logging
+import time
 
 class EyeMonitor:
-    def __init__(self, device_id, device_key, device_ip, service_running_flag, eye_ar_thresh, eye_ar_consec_frames):
+    def __init__(self, device_id, device_key, device_ip, service_running_flag, eye_ar_thresh, eye_ar_consec_frames, fps=30):
         self.COUNTER = 0
         self.device_id = device_id
         self.device_key = device_key
@@ -15,6 +16,7 @@ class EyeMonitor:
         self.service_running_flag = service_running_flag
         self.eye_ar_thresh = eye_ar_thresh
         self.eye_ar_consec_frames = eye_ar_consec_frames
+        self.fps = fps
 
         # Load dlib's face detector and shape predictor
         self.detector = dlib.get_frontal_face_detector()
@@ -40,13 +42,23 @@ class EyeMonitor:
     def monitor_eyes(self):
         # Start the video stream
         cap = cv2.VideoCapture(0)
+        cap.set(cv2.CAP_PROP_FPS, self.fps)
         is_debug = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't')
 
+        # Start time for FPS calculation
+        start_time = time.time()
+        frame_count = 0
+
         while self.service_running_flag.is_set():
+            frame_start_time = time.time()  # Frame start time for manual FPS control
+
             # Capture frame-by-frame
             ret, frame = cap.read()
             if not ret:
                 break
+
+            # Increment frame count
+            frame_count += 1
 
             # Convert the frame to grayscale
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -92,9 +104,21 @@ class EyeMonitor:
             if is_debug:
                 cv2.imshow("Frame", frame)
 
+            # Calculate elapsed time for this frame
+            frame_elapsed_time = time.time() - frame_start_time
+
+            # Calculate sleep time to maintain the desired FPS
+            sleep_time = max(0, (1.0 / self.fps) - frame_elapsed_time)
+            time.sleep(sleep_time)
+
             # Break the loop on 'q' key press
             if is_debug and cv2.waitKey(1) & 0xFF == ord('q'):
                 break
+
+        # Calculate and print FPS
+        elapsed_time = time.time() - start_time
+        fps = frame_count / elapsed_time
+        print(f"Approximate FPS: {fps}")
 
         # When everything is done, release the capture
         cap.release()
