@@ -8,11 +8,13 @@ app = Flask(__name__)
 service_running = False
 service_thread = None
 
-def run_service(eye_ar_thresh, eye_ar_consec_frames):
+
+def run_service(eye_ar_thresh, eye_ar_consec_frames, fps):
     global service_running
     service_running_flag.set()
-    asyncio.run(sleepy_tv_main(eye_ar_thresh, eye_ar_consec_frames))
+    asyncio.run(sleepy_tv_main(eye_ar_thresh, eye_ar_consec_frames, fps))
     service_running = False
+
 
 @app.route('/')
 def index():
@@ -25,7 +27,13 @@ def index():
         "device_id": scanner.device_id,
         "device_key": scanner.device_key
     }
-    return render_template('index.html', status=status, device_info=device_info)
+    # Pass default values or previously set values to the template
+    eye_ar_thresh = request.args.get('eye_ar_thresh', 0.25)
+    eye_ar_consec_frames = request.args.get('eye_ar_consec_frames', 30)
+    fps = request.args.get('fps', 30)
+    return render_template('index.html', status=status, device_info=device_info, eye_ar_thresh=eye_ar_thresh,
+                           eye_ar_consec_frames=eye_ar_consec_frames, fps=fps)
+
 
 @app.route('/start', methods=['POST'])
 def start_service():
@@ -33,10 +41,15 @@ def start_service():
     if not service_running:
         eye_ar_thresh = float(request.form['eye_ar_thresh'])
         eye_ar_consec_frames = int(request.form['eye_ar_consec_frames'])
-        service_thread = threading.Thread(target=run_service, args=(eye_ar_thresh, eye_ar_consec_frames))
+        fps = int(request.form['fps'])
+
+        print(f"Received values - eye_ar_thresh: {eye_ar_thresh}, eye_ar_consec_frames: {eye_ar_consec_frames}, fps: {fps}")
+
+        service_thread = threading.Thread(target=run_service, args=(eye_ar_thresh, eye_ar_consec_frames, fps))
         service_thread.start()
         service_running = True
-    return redirect(url_for('index'))
+    return redirect(url_for('index', eye_ar_thresh=eye_ar_thresh, eye_ar_consec_frames=eye_ar_consec_frames, fps=fps))
+
 
 @app.route('/stop', methods=['POST'])
 def stop_service():
@@ -49,12 +62,14 @@ def stop_service():
         service_running = False
     return redirect(url_for('index'))
 
+
 @app.route('/restart_scan', methods=['POST'])
 def restart_scan():
     scanner = DeviceScanner()
     asyncio.run(scanner.scan_devices())
     scanner.save_device_details()
     return redirect(url_for('index'))
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
